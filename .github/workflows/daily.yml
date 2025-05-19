@@ -2,24 +2,24 @@ name: Daily LINE News Broadcast
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # UTC時間每天0點執行（台灣8點）
+    - cron: '0 0 * * *'  # 每天 UTC 0 點（台灣8點）
+  workflow_dispatch:     # 允許手動執行
 
 jobs:
   broadcast:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install --upgrade -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run news broadcast
         env:
