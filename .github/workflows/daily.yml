@@ -1,8 +1,9 @@
 name: Daily LINE News Broadcast
 
 on:
+  workflow_dispatch:       # ✅ 加這行以便手動執行
   schedule:
-    - cron: '0 0 * * *'  # 台灣時間早上 8 點（UTC+0）
+    - cron: '0 0 * * *'    # 台灣時間早上 8 點（UTC+0）
 
 jobs:
   broadcast:
