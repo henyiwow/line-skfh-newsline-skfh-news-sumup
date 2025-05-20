@@ -5,7 +5,6 @@ import email.utils
 from urllib.parse import quote
 import requests
 from bs4 import BeautifulSoup
-import jieba
 from summa import summarizer
 
 # 設定 ACCESS_TOKEN
@@ -16,7 +15,7 @@ TW_TZ = timezone(timedelta(hours=8))
 now = datetime.now(TW_TZ)
 today = now.date()
 
-# 預設來源 (示例用，可自行調整)
+# RSS 來源
 RSS_URLS = [
     "https://news.google.com/rss/search?q=新光金控+OR+新光人壽+OR+台新金控+OR+台新人壽+OR+壽險+OR+金控+OR+人壽+OR+新壽+OR+台新壽+OR+吳東進+OR+吳東亮&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
     "https://news.google.com/rss/search?q=新光金控+OR+新光人壽+OR+新壽+OR+吳東進&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
@@ -66,13 +65,20 @@ def is_taiwan_news(source_name, link):
         return True
     return False
 
+def resolve_redirect_url(url):
+    try:
+        res = requests.head(url, allow_redirects=True, timeout=5)
+        return res.url
+    except Exception as e:
+        print(f"⚠️ 解析跳轉連結失敗: {e}")
+        return url
+
 def fetch_article_content(url):
     try:
         res = requests.get(url, timeout=10)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # 嘗試多種常見文章區塊選擇器（可依需求增減）
         selectors = [
             'article',
             'div.article-content',
@@ -88,13 +94,11 @@ def fetch_article_content(url):
             content = soup.select_one(sel)
             if content:
                 text = content.get_text(separator='\n').strip()
-                if len(text) > 200:  # 確認抓到足夠內容
+                if len(text) > 200:
                     break
         if not text:
-            # fallback: 抓全文純文字
             text = soup.get_text(separator='\n').strip()
 
-        # 移除過多空白行
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         cleaned_text = "\n".join(lines)
         return cleaned_text
@@ -104,11 +108,9 @@ def fetch_article_content(url):
 
 def summarize_text(text, max_words=100):
     try:
-        # jieba 斷詞後用 summa 摘要
         return summarizer.summarize(text, words=max_words)
     except Exception as e:
         print(f"⚠️ 摘要失敗: {e}")
-        # 失敗則用前100字代替
         return text[:max_words]
 
 def fetch_news():
@@ -142,7 +144,6 @@ def fetch_news():
             source_name = source_elem.text.strip() if source_elem is not None else "未標示"
             pub_datetime = email.utils.parsedate_to_datetime(pubDate_str).astimezone(TW_TZ)
 
-            # 只保留24小時內新聞
             if now - pub_datetime > timedelta(hours=24):
                 continue
 
@@ -152,15 +153,21 @@ def fetch_news():
                 continue
             if link in processed_links:
                 continue
+
+            # 處理 Google News 跳轉連結
+            if "news.google.com/rss/articles" in link:
+                original_link = resolve_redirect_url(link)
+                if original_link != link:
+                    print(f"🔗 已解析原始連結：{original_link}")
+                    link = original_link
+
             processed_links.add(link)
 
             short_link = shorten_url(link)
-
-            # 抓全文並摘要
             full_text = fetch_article_content(link)
             summary = summarize_text(full_text, max_words=100)
             if not summary:
-                summary = title  # 摘要失敗用標題代替
+                summary = title
 
             category = classify_news(title)
             formatted = (
@@ -175,7 +182,6 @@ def fetch_news():
 
 def send_message(news_by_category):
     max_length = 4000
-    # 依序排列所有新聞：新光金控→台新金控→金控→保險→其他
     ordered_news = []
     for cat in CATEGORY_ORDER:
         ordered_news.extend(news_by_category.get(cat, []))
@@ -215,6 +221,3 @@ def broadcast_message(message):
 if __name__ == "__main__":
     news = fetch_news()
     send_message(news)
-
-
-
