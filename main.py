@@ -8,13 +8,13 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from config import LINE_NOTIFY_TOKEN
 
-# 關鍵字排序
+# 關鍵字排序優先順序
 KEYWORDS_ORDER = [
     "新光人壽", "新光金控", "台新人壽", "台新金控",
     "金控", "人壽", "壽險", "健康險", "意外險"
 ]
 
-# 昨天日期
+# RSS 搜尋格式：Google News + 日期
 yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 GOOGLE_NEWS_URL = "https://news.google.com/rss/search?q={query}+after:{date}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
 
@@ -34,8 +34,8 @@ def get_summary_from_url(url, max_sentences=3):
         summarizer = LsaSummarizer()
         summary_sentences = summarizer(parser.document, max_sentences)
         summary = " ".join(str(s) for s in summary_sentences)
-        return summary.strip()[:100]  # 限制 100 字
-    except Exception as e:
+        return summary.strip()[:100]
+    except Exception:
         return None
 
 def send_line_notify(message):
@@ -69,6 +69,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
