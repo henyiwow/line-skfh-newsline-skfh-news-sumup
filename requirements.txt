@@ -1,7 +1,4 @@
 feedparser
-newspaper3k
-sumy
 requests
-lxml[html_clean]
 
 
