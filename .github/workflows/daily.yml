@@ -2,7 +2,7 @@ name: Daily News Push
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # 每天台灣早上 9 點 (UTC+8)
+    - cron: '0 1 * * *'  # 台灣時間早上 9 點
   workflow_dispatch:
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Inject Secret and Run
         env:
-          LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
         run: |
-          echo "LINE_NOTIFY_TOKEN = '${LINE_NOTIFY_TOKEN}'" > config.py
+          echo "LINE_CHANNEL_ACCESS_TOKEN = '${LINE_CHANNEL_ACCESS_TOKEN}'" > config.py
           python main.py
