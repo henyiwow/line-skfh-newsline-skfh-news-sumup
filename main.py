@@ -72,7 +72,6 @@ def fetch_article_content(url):
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # 嘗試多種常見文章區塊選擇器（可依需求增減）
         selectors = [
             'article',
             'div.article-content',
@@ -88,13 +87,11 @@ def fetch_article_content(url):
             content = soup.select_one(sel)
             if content:
                 text = content.get_text(separator='\n').strip()
-                if len(text) > 200:  # 確認抓到足夠內容
+                if len(text) > 200:
                     break
         if not text:
-            # fallback: 抓全文純文字
             text = soup.get_text(separator='\n').strip()
 
-        # 移除過多空白行
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         cleaned_text = "\n".join(lines)
         return cleaned_text
@@ -104,11 +101,9 @@ def fetch_article_content(url):
 
 def summarize_text(text, max_words=100):
     try:
-        # jieba 斷詞後用 summa 摘要
         return summarizer.summarize(text, words=max_words)
     except Exception as e:
         print(f"⚠️ 摘要失敗: {e}")
-        # 失敗則用前100字代替
         return text[:max_words]
 
 def fetch_news():
@@ -141,7 +136,15 @@ def fetch_news():
             source_name = source_elem.text.strip() if source_elem is not None else "未標示"
             pub_datetime = email.utils.parsedate_to_datetime(pubDate_str).astimezone(TW_TZ)
 
-            # 只保留24小時內新聞
+            # 除錯輸出
+            print(f"\n🧪 檢查新聞：{title}")
+            print(f"🕒 發布時間：{pub_datetime}")
+            print(f"📰 來源名稱：{source_name}")
+            print(f"🌐 連結：{link}")
+            print(f"✅ 是否台灣新聞：{is_taiwan_news(source_name, link)}")
+            print(f"✅ 是否為24小時內：{(now - pub_datetime) <= timedelta(hours=24)}")
+            print(f"✅ 是否不含排除關鍵字：{not any(bad_kw in title for bad_kw in EXCLUDED_KEYWORDS)}")
+
             if now - pub_datetime > timedelta(hours=24):
                 continue
 
@@ -152,12 +155,10 @@ def fetch_news():
                 continue
 
             short_link = shorten_url(link)
-
-            # 抓全文並摘要
             full_text = fetch_article_content(link)
             summary = summarize_text(full_text, max_words=100)
             if not summary:
-                summary = title  # 摘要失敗用標題代替
+                summary = title
 
             category = classify_news(title)
             formatted = (
@@ -172,7 +173,6 @@ def fetch_news():
 
 def send_message(news_by_category):
     max_length = 4000
-    # 依序排列所有新聞：新光金控→台新金控→金控→保險→其他
     ordered_news = []
     for cat in CATEGORY_ORDER:
         ordered_news.extend(news_by_category.get(cat, []))
@@ -212,4 +212,5 @@ def broadcast_message(message):
 if __name__ == "__main__":
     news = fetch_news()
     send_message(news)
+
 
