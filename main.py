@@ -1,11 +1,7 @@
 import feedparser
 import requests
-from newspaper import Article
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from sumy.parsers.plaintext import PlaintextParser
-from sumy.nlp.tokenizers import Tokenizer
-from sumy.summarizers.lsa import LsaSummarizer
 from config import LINE_NOTIFY_TOKEN
 
 # 關鍵字排序優先順序
@@ -26,29 +22,6 @@ def fetch_news(keyword):
     print(f"📄 找到 {len(feed.entries)} 則新聞")
     return feed.entries
 
-def get_summary_from_url(url, max_sentences=3):
-    try:
-        print(f"📰 嘗試抓取摘要: {url}")
-        article = Article(url)
-        article.download()
-        article.parse()
-        text = article.text
-
-        if not text.strip():
-            print("⚠️ 無內文可摘要")
-            return None
-
-        parser = PlaintextParser.from_string(text, Tokenizer("chinese"))
-        summarizer = LsaSummarizer()
-        summary_sentences = summarizer(parser.document, max_sentences)
-        summary = " ".join(str(s) for s in summary_sentences)
-        trimmed_summary = summary.strip()[:100]
-        print(f"✅ 摘要完成: {trimmed_summary}")
-        return trimmed_summary
-    except Exception as e:
-        print(f"❌ 摘要失敗: {e}")
-        return None
-
 def send_line_notify(message):
     url = "https://notify-api.line.me/api/notify"
     headers = {"Authorization": f"Bearer {LINE_NOTIFY_TOKEN}"}
@@ -56,6 +29,12 @@ def send_line_notify(message):
     response = requests.post(url, headers=headers, data=data)
     print(f"\n📬 發送 LINE Notify 狀態碼：{response.status_code}")
     print(f"📨 回應內容：{response.text}")
+
+def clean_summary(summary):
+    import re
+    # 移除 HTML tag、限制字數 100 字
+    text = re.sub('<[^<]+?>', '', summary)
+    return text.strip().replace('\n', '').replace('\r', '')[:100]
 
 def main():
     seen_links = set()
@@ -71,10 +50,11 @@ def main():
             print(f"\n🔗 新聞標題：{entry.title}")
             print(f"🔗 新聞連結：{entry.link}")
 
-            summary = get_summary_from_url(entry.link)
-            if summary:
-                final_message = f"📢【{keyword}】\n{summary}\n👉 {entry.link}"
-                break
+            if hasattr(entry, 'summary'):
+                summary = clean_summary(entry.summary)
+                if summary:
+                    final_message = f"📢【{keyword}】\n{summary}\n👉 {entry.link}"
+                    break
         if final_message:
             break
 
@@ -87,5 +67,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
