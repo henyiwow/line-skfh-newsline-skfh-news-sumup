@@ -1,4 +1,4 @@
-jieba
+feedparser
 requests
 beautifulsoup4
 summa
