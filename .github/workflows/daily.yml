@@ -1,27 +1,27 @@
-name: Daily LINE News Broadcast
+name: Run LINE News Script
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 0 點（台灣8點）
-  workflow_dispatch:     # 允許手動執行
+    - cron: '0 0 * * *'  # 每天 00:00 執行
 
 jobs:
-  broadcast:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 安裝 Python 套件
         run: pip install -r requirements.txt
 
-      - name: Run news broadcast
-        env:
-          ACCESS_TOKEN: ${{ secrets.LINE_TOKEN }}
+      - name: 執行主程式
         run: python main.py
+        env:
+          LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
