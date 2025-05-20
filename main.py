@@ -38,17 +38,27 @@ def fetch_articles(rss_url):
         })
     return articles
 
-def fetch_and_summarize_content(url, max_sentences=3):
+def fetch_and_summarize_content(url, max_words=100):
     try:
         resp = requests.get(url, timeout=10)
         soup = BeautifulSoup(resp.text, "html.parser")
+
         texts = soup.stripped_strings
         raw_text = " ".join(texts)
-        summary = summarize(raw_text, words=100)
-        summary = re.sub(r"\s+", " ", summary).strip()
-        return summary[:100] if summary else None
-    except Exception:
-        return None
+
+        summary = summarize(raw_text, words=max_words)
+        if summary and len(summary) > 20:
+            summary = re.sub(r"\s+", " ", summary).strip()
+            return summary[:max_words]
+
+        fallback = raw_text[:max_words].strip()
+        if fallback:
+            return fallback
+
+    except Exception as e:
+        print(f"⚠️ 摘要時錯誤: {e}")
+
+    return None
 
 def classify_by_priority(article):
     text = f"{article['title']}"
@@ -97,5 +107,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
